@@ -1,6 +1,7 @@
 package com.dicoding.storyapp.view.main
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
@@ -45,13 +46,25 @@ class AddStoryActivity : AppCompatActivity() {
     private var token: String? = null
     private lateinit var myButton: MyButton
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var latPart: RequestBody? = null
+    private var lonPart: RequestBody? = null
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (!isGranted) {
                 showToast("Camera permission denied")
             } else {
-                getMyLastLocation()
+                getMyLastLocation { location ->
+                    if (location != null) {
+                        latPart = location.latitude.toString()
+                            .toRequestBody("text/plain".toMediaTypeOrNull())
+                        lonPart = location.longitude.toString()
+                            .toRequestBody("text/plain".toMediaTypeOrNull())
+                    } else {
+                        Log.d("MainActivity", "Location is null or permission not granted")
+                    }
+                }
+
             }
         }
 
@@ -91,6 +104,7 @@ class AddStoryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityAddStoryBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         myButton = findViewById(R.id.uploadButton)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -120,8 +134,17 @@ class AddStoryActivity : AppCompatActivity() {
             galleryButton.setOnClickListener { openGallery() }
             cameraButton.setOnClickListener { startCamera() }
             uploadButton.setOnClickListener {
-                getMyLastLocation()
-                uploadStory()
+                getMyLastLocation { location ->
+                    if (location != null) {
+                        latPart = location.latitude.toString()
+                            .toRequestBody("text/plain".toMediaTypeOrNull())
+                        lonPart = location.longitude.toString()
+                            .toRequestBody("text/plain".toMediaTypeOrNull())
+                        uploadStory(latPart!!, lonPart!!)
+                    } else {
+                        Log.d("MainActivity", "Location is null or permission not granted")
+                    }
+                }
 
             }
         }
@@ -181,7 +204,7 @@ class AddStoryActivity : AppCompatActivity() {
         }
     }
 
-    private fun uploadStory() {
+    private fun uploadStory(latPart: RequestBody, lonPart: RequestBody) {
         val imageUri = mainViewModel.currentImageUri.value
         if (imageUri == null) {
             showToast("No image selected.")
@@ -216,11 +239,9 @@ class AddStoryActivity : AppCompatActivity() {
 
         val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
 
-        val latPart: RequestBody? = null
-        val lonPart: RequestBody? = null
-
         token?.let {
             Log.d(TAG, "uploadStory: Token: $it")
+            Log.d("MainActivity", "Latitude2: $latPart, Longitude: $lonPart")
             addStoryViewModel.uploadStory(it, imagePart, descriptionPart, latPart, lonPart)
             Handler(Looper.getMainLooper()).postDelayed({
                 addStoryViewModel.uploadResponse.observe(this) { response ->
@@ -245,10 +266,6 @@ class AddStoryActivity : AppCompatActivity() {
 
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
-
-    companion object {
-        private const val REQUIRED_PERMISSION = Manifest.permission.CAMERA
     }
 
     fun copyFileFromURI(context: Context, contentUri: Uri, destinationFile: File): File {
@@ -291,34 +308,53 @@ class AddStoryActivity : AppCompatActivity() {
 
 //get location belum mendapatkan izin
 
-    private fun getMyLastLocation() {
-        if     (checkPermission(Manifest.permission.ACCESS_FINE_LOCATION) &&
-            checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-        ){
+    private fun getMyLastLocation(onLocationResult: (Location?) -> Unit) {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
                 if (location != null) {
-                    showStartMarker(location)
-                    Log.d("AddSoryActivity", "getMyLastLocation: $location")
+                    Log.d("AddStoryActivity", "getMyLastLocation: $location")
+                    onLocationResult(location) // Return location through the callback
                 } else {
                     Toast.makeText(
                         this@AddStoryActivity,
                         "Location is not found. Try Again",
                         Toast.LENGTH_SHORT
                     ).show()
+                    onLocationResult(null) // Return null if location is not found
                 }
             }
         } else {
-            requestPermissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ).toString()
-            )
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            onLocationResult(null) // Return null if permission is not granted
         }
     }
+
 
     private fun showStartMarker(location: Location) {
         val startLocation = LatLng(location.latitude, location.longitude)
         Log.d("AddStoryActivity", "showStartMarker: $startLocation")
+    }
+
+    private fun showPermissionRationale() {
+        AlertDialog.Builder(this)
+            .setTitle("Camera Permission Required")
+            .setMessage("This app needs camera access to take photos for your stories.")
+            .setPositiveButton("Grant Permission") { _, _ ->
+                requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    companion object {
+        private const val REQUIRED_PERMISSION = Manifest.permission.CAMERA
     }
 }

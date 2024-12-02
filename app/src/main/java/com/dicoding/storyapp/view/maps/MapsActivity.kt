@@ -5,6 +5,8 @@ import android.location.Geocoder
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import androidx.activity.viewModels
 import com.dicoding.storyapp.R
 import com.dicoding.storyapp.config.RetrofitClient.apiService
@@ -46,6 +48,35 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         mapsViewModel.fetchAllStoriesWithLocation()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.map_options, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.normal_type -> {
+                mMap.mapType = GoogleMap.MAP_TYPE_NORMAL
+                true
+            }
+            R.id.satellite_type -> {
+                mMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
+                true
+            }
+            R.id.terrain_type -> {
+                mMap.mapType = GoogleMap.MAP_TYPE_TERRAIN
+                true
+            }
+            R.id.hybrid_type -> {
+                mMap.mapType = GoogleMap.MAP_TYPE_HYBRID
+                true
+            }
+            else -> {
+                super.onOptionsItemSelected(item)
+            }
+        }
+    }
+
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mapsViewModel.stories.observe(this, { stories ->
@@ -67,9 +98,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
         })
+
+        mMap.uiSettings.isZoomControlsEnabled = true
+        mMap.uiSettings.isIndoorLevelPickerEnabled = true
+        mMap.uiSettings.isCompassEnabled = true
+        mMap.uiSettings.isMapToolbarEnabled = true
     }
-
-
 
     fun addMarkerAtLocation(
         mMap: GoogleMap,
@@ -80,10 +114,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     ) {
         val location = LatLng(latitude, longitude)
         var nameLocation = getAddressFromLatLng(this, latitude, longitude)
-
-        Log.d("MapsActivity 1", "addMarkerAtLocation: $latitude, $longitude, $location, $nameLocation")
-
-        mMap.addMarker(MarkerOptions().position(location).title(title).snippet(nameLocation))
+        val deskripsi = "$title menulis: $snipet"
+        mMap.addMarker(MarkerOptions().position(location).title(nameLocation).snippet(deskripsi))
         mMap.moveCamera(CameraUpdateFactory.newLatLng(location))
     }
 
