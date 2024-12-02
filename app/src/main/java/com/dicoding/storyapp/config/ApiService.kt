@@ -53,4 +53,10 @@ interface ApiService {
         @Part("lat") lat: RequestBody?,
         @Part("lon") lon: RequestBody?
     ): AddNewStoryResponse
+
+    @GET("stories")
+    suspend fun getStories(
+        @Query("page") page: Int,
+        @Query("size") size: Int
+    ): StoryResponse
 }
