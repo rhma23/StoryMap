@@ -71,4 +71,9 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.android.gms:play-services-location:21.2.0")
+
+    // Dependency Paging
+    implementation("androidx.paging:paging-runtime:3.2.1") // Versi terbaru per Oktober 2024
+    // Jika menggunakan Kotlin coroutine
+    implementation("androidx.paging:paging-runtime-ktx:3.2.1") // Versi terbaru per Oktober 2024
 }
