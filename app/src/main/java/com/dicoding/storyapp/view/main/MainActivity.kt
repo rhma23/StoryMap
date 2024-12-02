@@ -11,6 +11,7 @@ import android.view.WindowManager
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.dicoding.storyapp.view.maps.MapsActivity
 import com.dicoding.storyapp.R
 import com.dicoding.storyapp.adapter.StoryAdapter
 import com.dicoding.storyapp.databinding.ActivityMainBinding
@@ -62,7 +63,7 @@ class MainActivity : AppCompatActivity() {
             binding.rvStory.adapter = storyAdapter
         }
 
-        viewModel.getAllStories(false)
+        viewModel.getAllStories(true)
 
         binding.progressBarHome.visibility = View.VISIBLE
         binding.rvStory.visibility = View.INVISIBLE
@@ -77,6 +78,7 @@ class MainActivity : AppCompatActivity() {
                 binding.progressBarHome.visibility = View.GONE
             }
         }, 1000)
+
         setupView()
         setupAction()
     }
@@ -101,6 +103,10 @@ class MainActivity : AppCompatActivity() {
             when (menuItem.itemId) {
                 R.id.logout -> {
                     viewModel.logout()
+                    true
+                } R.id.maps -> {
+                    val intent = Intent(this, MapsActivity::class.java)
+                    startActivity(intent)
                     true
                 }
                 else -> false

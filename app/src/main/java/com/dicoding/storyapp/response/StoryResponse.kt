@@ -14,19 +14,18 @@ data class ListStoryItem(
 	val createdAt: String? = null,
 	val name: String? = null,
 	val description: String? = null,
-	val lon: Any? = null,
+	val lon: Double? = null,
 	val id: String? = null,
-	val lat: Any? = null
+	val lat: Double? = null
 ) : Parcelable {
-
 	constructor(parcel: Parcel) : this(
 		parcel.readString(),
 		parcel.readString(),
 		parcel.readString(),
 		parcel.readString(),
-		parcel.readValue(Any::class.java.classLoader),
+		parcel.readValue(Double::class.java.classLoader) as? Double,
 		parcel.readString(),
-		parcel.readValue(Any::class.java.classLoader)
+		parcel.readValue(Double::class.java.classLoader) as? Double
 	)
 
 	override fun writeToParcel(parcel: Parcel, flags: Int) {

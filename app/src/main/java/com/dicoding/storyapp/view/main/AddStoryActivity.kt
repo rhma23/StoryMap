@@ -27,11 +27,15 @@ import java.io.File
 import java.io.FileOutputStream
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import com.dicoding.storyapp.R
 import com.dicoding.storyapp.ui.MyButton
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.LatLng
 import java.io.ByteArrayOutputStream
 
 class AddStoryActivity : AppCompatActivity() {
@@ -40,11 +44,14 @@ class AddStoryActivity : AppCompatActivity() {
     private lateinit var addStoryViewModel: AddStoryViewModel
     private var token: String? = null
     private lateinit var myButton: MyButton
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (!isGranted) {
                 showToast("Camera permission denied")
+            } else {
+                getMyLastLocation()
             }
         }
 
@@ -85,6 +92,7 @@ class AddStoryActivity : AppCompatActivity() {
         binding = ActivityAddStoryBinding.inflate(layoutInflater)
         setContentView(binding.root)
         myButton = findViewById(R.id.uploadButton)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         val factory = ViewModelFactory.getInstance(applicationContext)
         mainViewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
@@ -112,7 +120,9 @@ class AddStoryActivity : AppCompatActivity() {
             galleryButton.setOnClickListener { openGallery() }
             cameraButton.setOnClickListener { startCamera() }
             uploadButton.setOnClickListener {
+                getMyLastLocation()
                 uploadStory()
+
             }
         }
         binding.progressBar.visibility = View.INVISIBLE
@@ -141,7 +151,8 @@ class AddStoryActivity : AppCompatActivity() {
     }
 
     private fun startCrop(sourceUri: Uri) {
-        val destinationUri = Uri.fromFile(File(cacheDir, "cropped_${System.currentTimeMillis()}.jpg"))
+        val destinationUri =
+            Uri.fromFile(File(cacheDir, "cropped_${System.currentTimeMillis()}.jpg"))
         UCrop.of(sourceUri, destinationUri)
             .withAspectRatio(16f, 9f)
             .withMaxResultSize(1080, 720)
@@ -155,7 +166,7 @@ class AddStoryActivity : AppCompatActivity() {
             if (resultUri != null) {
                 mainViewModel.setCurrentImageUri(resultUri)
                 showImage(resultUri)
-            }else {
+            } else {
                 showToast("Crop error: resultUri is null")
             }
         } else if (resultCode == UCrop.RESULT_ERROR) {
@@ -198,7 +209,9 @@ class AddStoryActivity : AppCompatActivity() {
         }
 
         val imagePart = MultipartBody.Part.createFormData(
-            "photo", compressedFile.name, compressedFile.asRequestBody("image/*".toMediaTypeOrNull())
+            "photo",
+            compressedFile.name,
+            compressedFile.asRequestBody("image/*".toMediaTypeOrNull())
         )
 
         val descriptionPart = description.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -209,20 +222,20 @@ class AddStoryActivity : AppCompatActivity() {
         token?.let {
             Log.d(TAG, "uploadStory: Token: $it")
             addStoryViewModel.uploadStory(it, imagePart, descriptionPart, latPart, lonPart)
-                Handler(Looper.getMainLooper()).postDelayed({
-                    addStoryViewModel.uploadResponse.observe(this) { response ->
-                        if (!response.error!!) {
-                            showToast("Story uploaded successfully!")
-                        } else {
-                            showToast("Upload failed: ${response.message}")
-                        }
-                        val intent = Intent(this, MainActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
-                        startActivity(intent)
-                        binding.progressBar.visibility = View.GONE
-                        myButton.isEnabled = true
+            Handler(Looper.getMainLooper()).postDelayed({
+                addStoryViewModel.uploadResponse.observe(this) { response ->
+                    if (!response.error!!) {
+                        showToast("Story uploaded successfully!")
+                    } else {
+                        showToast("Upload failed: ${response.message}")
                     }
-                }, 1000)
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(intent)
+                    binding.progressBar.visibility = View.GONE
+                    myButton.isEnabled = true
+                }
+            }, 1000)
         } ?: run {
             showToast("Token is not available.")
         }
@@ -269,4 +282,43 @@ class AddStoryActivity : AppCompatActivity() {
         return compressedFile
     }
 
+    private fun checkPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+//get location belum mendapatkan izin
+
+    private fun getMyLastLocation() {
+        if     (checkPermission(Manifest.permission.ACCESS_FINE_LOCATION) &&
+            checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+        ){
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                if (location != null) {
+                    showStartMarker(location)
+                    Log.d("AddSoryActivity", "getMyLastLocation: $location")
+                } else {
+                    Toast.makeText(
+                        this@AddStoryActivity,
+                        "Location is not found. Try Again",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        } else {
+            requestPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ).toString()
+            )
+        }
+    }
+
+    private fun showStartMarker(location: Location) {
+        val startLocation = LatLng(location.latitude, location.longitude)
+        Log.d("AddStoryActivity", "showStartMarker: $startLocation")
+    }
 }

@@ -18,11 +18,13 @@ import com.dicoding.storyapp.data.pref.UserPreference
 import com.dicoding.storyapp.data.pref.dataStore
 import com.dicoding.storyapp.databinding.ActivityLoginBinding
 import com.dicoding.storyapp.factory.LoginViewModelFactory
+import com.dicoding.storyapp.util.SessionManager
 import com.dicoding.storyapp.view.main.MainActivity
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var loginViewModel: LoginViewModel
     private lateinit var binding: ActivityLoginBinding
+    private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +38,9 @@ class LoginActivity : AppCompatActivity() {
         loginViewModel = ViewModelProvider(this, factory)[LoginViewModel::class.java]
 
         binding.progressBarLogin.visibility = View.GONE
+
+        sessionManager = SessionManager(this)
+        loginViewModel.setSessionManager(sessionManager)
 
         setupView()
         setupAction()

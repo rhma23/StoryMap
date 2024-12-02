@@ -48,7 +48,6 @@ class MainViewModel(private val repository: UserRepository) : ViewModel() {
 
             repository.getSession().collect { user ->
                 val token = user.token
-                Log.d("Token", "Token: $token")
 
                 val locationParam = if (withLocation) "1" else "0"
 

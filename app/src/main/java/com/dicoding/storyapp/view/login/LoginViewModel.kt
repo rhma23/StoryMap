@@ -12,10 +12,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.dicoding.storyapp.response.LoginResponse
+import com.dicoding.storyapp.util.SessionManager
 
 private lateinit var userPreference: UserPreference
 
 class LoginViewModel (private val repository: UserRepository) : ViewModel() {
+
+    private lateinit var sessionManager: SessionManager
+
+    fun setSessionManager(sessionManager: SessionManager) {
+        this.sessionManager = sessionManager
+    }
 
     fun loginUser(
         email: String,
@@ -29,6 +36,7 @@ class LoginViewModel (private val repository: UserRepository) : ViewModel() {
             try {
                 val response: LoginResponse = repository.login(email, password)
                 Log.d(TAG, "loginUser: ${response.loginResult?.token}")
+                sessionManager.saveToken(response.loginResult?.token ?: "")
                 if (response.error == false) {
                     CoroutineScope(Dispatchers.IO).launch {
                         response.loginResult?.userId?.let { response.loginResult.name?.let { it1 ->
@@ -38,7 +46,9 @@ class LoginViewModel (private val repository: UserRepository) : ViewModel() {
                                 )
                             }
                         } }
-                            ?.let { userPreference.saveSession(it) }
+                            ?.let {
+                                userPreference.saveSession(it)
+                            }
                     }
                     onResult(true)
                 } else {

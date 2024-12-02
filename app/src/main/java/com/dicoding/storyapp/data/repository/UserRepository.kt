@@ -7,7 +7,7 @@ import com.dicoding.storyapp.config.RetrofitClient.apiService
 import com.dicoding.storyapp.response.LoginResponse
 
 class UserRepository private constructor(
-    private val userPreference: UserPreference
+    val userPreference: UserPreference
 ) {
 
     suspend fun saveSession(user: UserModel) {
@@ -28,7 +28,7 @@ class UserRepository private constructor(
 
     companion object {
         @Volatile
-        private var instance: UserRepository? = null
+        var instance: UserRepository? = null
         fun getInstance(
             userPreference: UserPreference
         ): UserRepository =
