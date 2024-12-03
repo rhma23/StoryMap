@@ -39,4 +39,5 @@
     <string name="maps">maps</string>
     <string name="preview_image">Preview Image</string>
     <string name="title_activity_maps">Story Maps</string>
+    <string name="retry">Coba Lagi</string>
 </resources>
